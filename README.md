@@ -73,7 +73,7 @@ uvicorn main:app --reload --port 8000
 | 模块 | 路径 | 说明 |
 |------|------|------|
 | **系统** | `GET /` | 系统概览 |
-| | `GET /api/health` | 健康检查 |
+| | `GET /api/health` | 状态监测 |
 | | `GET /api/stats` | 数据统计 |
 | | `GET /api/behavior/stats` | 行为统计 |
 | **视频** | `GET /api/videos` | 视频列表 |
