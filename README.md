@@ -10,11 +10,21 @@
 # 1. 安装依赖
 pip install -r requirements.txt
 
-# 2. 配置 API Key（二选一）
-# 方式一：设置环境变量
+# 2. 配置 API Key
+
+# 推荐方式：创建 .env 文件（复制模板并填入密钥）
+cp .env.example .env          # Linux / macOS
+copy .env.example .env        # Windows CMD / PowerShell
+
+# 或临时设置环境变量：
+# --- Linux / macOS / Git Bash ---
 export LLM_API_KEY="sk-xxxx"
-# 方式二：复制 .env.example 为 .env 并填入密钥
-cp .env.example .env
+
+# --- Windows PowerShell ---
+$env:LLM_API_KEY = "sk-xxxx"
+
+# --- Windows CMD ---
+set LLM_API_KEY=sk-xxxx
 
 # 3. 启动服务（二选一）
 python main.py
