@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Agent 3: 决策卡片生成器 — 支持开场卡片 + 冷场救援"""
-import json
+import json, random
 from typing import List
 from config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from utils import extract_json
 
 SYSTEM_PROMPT = """你是一个数据敏锐的主播操盘手。你需要给主播生成"决策卡片"。
 
@@ -104,22 +105,23 @@ class LiveHostAgent:
                           {"role": "user", "content": user_msg}],
                 temperature=0.7, max_tokens=300,
             )
-            return self._parse(resp.choices[0].message.content or "", card_type, baseline, current, online, idle_sec)
+            return self._parse(resp.choices[0].message.content or "", card_type,
+                               baseline_top3, current_top3, online_count, idle_sec)
         except Exception:
-            return self._mock(card_type, baseline, current, online, idle_sec)
+            return self._mock(card_type, baseline_top3, current_top3, online_count, idle_sec)
 
-    def _parse(self, content, card_type, baseline, current, online, idle):
-        raw = content
-        if "```json" in content: raw = content.split("```json")[1].split("```")[0]
-        elif "```" in content: raw = content.split("```")[1].split("```")[0]
+    def _parse(self, content: str, card_type: str, baseline: List[str],
+               current: List[str], online: int, idle: int) -> dict:
+        """解析 LLM 返回的 JSON 决策卡片"""
         try:
-            data = json.loads(raw.strip())
+            data = extract_json(content)
             return {"topic": data.get("topic", ""), "reason": data.get("reason", ""), "script": data.get("script", "")}
         except json.JSONDecodeError:
             return self._mock(card_type, baseline, current, online, idle)
 
-    def _mock(self, card_type, baseline, current, online, idle):
-        import random
+    def _mock(self, card_type: str, baseline: List[str], current: List[str],
+              online: int, idle: int) -> dict:
+        """mock 模式：从模板库随机选取并变量替换"""
         t = current[0] if current else "通用"
         o = baseline[0] if baseline else "之前"
         pool = MOCK_CARDS.get(card_type, MOCK_CARDS["drift"])

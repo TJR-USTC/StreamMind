@@ -64,10 +64,6 @@ def get_all_user_stats():
             "follow_rate": round(fol_rate * 100, 1),
         })
     return {"total": len(results), "users": results}
-    for u in _users_loader():
-        if u.user_id == user_id:
-            return u.model_dump()
-    raise HTTPException(404, f"用户 {user_id} 不存在")
 
 
 @router.get("/{user_id}/behaviors")

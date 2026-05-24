@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""直播服务: 状态管理 + 漂移检测 + 冷场监控 + 人气峰值追踪"""
 import asyncio, math, time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from config import LATENT_DIM, DIM_LABELS, MIN_ONLINE_USERS, MAX_ONLINE_USERS, RNG
 from config import DRIFT_EUCLIDEAN_THRESHOLD, DRIFT_TOP1_CHANGE
 from models import UserProfile
+from utils import logger
+
+_lock: asyncio.Lock = asyncio.Lock()
 
 _live_room: Dict[str, Any] = {
     "is_live": False,
@@ -22,13 +24,13 @@ _live_room: Dict[str, Any] = {
     "last_card_time": 0,
     "audience_history": [],
     "peak_moment": None,
-    "pending_card_type": "",  # "drift" or "cold" — card stream polls this
+    "pending_card_type": "",
 }
 
-_rotation_task: asyncio.Task | None = None
+_rotation_task: Optional[asyncio.Task] = None
 _live_event: asyncio.Event = asyncio.Event()
 _card_event: asyncio.Event = asyncio.Event()
-_cold_event: asyncio.Event = asyncio.Event()  # 冷场信号
+_cold_event: asyncio.Event = asyncio.Event()
 
 
 def _euclidean(a, b):
@@ -113,37 +115,62 @@ def detect_drift(users: List[UserProfile]) -> dict:
             "baseline_top5": baseline_top5, "current_top5": current_top5}
 
 
-def get_top5():
+def get_top5() -> List[str]:
+    """获取当前 Top5 偏好维度"""
     return list(_live_room.get("preferences", {}).keys())[:5]
-def get_current_top5():
+
+def get_current_top5() -> List[str]:
+    """获取当前 Top5"""
     return _live_room.get("current_top5", [])
-def get_baseline_top5():
+
+def get_baseline_top5() -> List[str]:
+    """获取基线 Top5"""
     return _live_room.get("baseline_top5", [])
-def get_card_count():
+
+def get_card_count() -> int:
+    """获取已生成卡片数量"""
     return _live_room.get("card_count", 0)
-def inc_card_count():
+
+def inc_card_count() -> None:
+    """递增卡片计数器"""
     _live_room["card_count"] = _live_room.get("card_count", 0) + 1
     _live_room["last_card_time"] = time.time()
-def get_last_card_time():
+
+def get_last_card_time() -> float:
+    """获取上次卡片生成时间"""
     return _live_room.get("last_card_time", 0)
-def get_live_state():
+
+def get_live_state() -> Dict[str, Any]:
+    """获取完整直播状态字典"""
     return _live_room
-def get_pending_card_type():
+
+def get_pending_card_type() -> str:
+    """获取待处理的卡片类型"""
     return _live_room.get("pending_card_type", "")
 
-def clear_pending_card():
+def clear_pending_card() -> None:
+    """清除待处理卡片标记"""
     _live_room["pending_card_type"] = ""
-def get_card_event():
+
+def get_card_event() -> asyncio.Event:
+    """获取卡片事件"""
     return _card_event
-def get_cold_event():
+
+def get_cold_event() -> asyncio.Event:
+    """获取冷场事件"""
     return _cold_event
-def get_peak_moment():
+
+def get_peak_moment() -> Optional[Dict]:
+    """获取人气峰值时刻"""
     return _live_room.get("peak_moment")
-def get_audience_history():
+
+def get_audience_history() -> List:
+    """获取观众历史记录"""
     return _live_room.get("audience_history", [])
 
 
-async def _rotation_loop(users):
+async def _rotation_loop(users: List[UserProfile]) -> None:
+    """观众轮转循环：定时刷新在线用户并检测漂移"""
     while _live_room["is_live"]:
         await asyncio.sleep(_live_room["rotation_interval"])
         if not _live_room["is_live"]:
@@ -152,21 +179,22 @@ async def _rotation_loop(users):
         all_ids = [u.user_id for u in users]
         RNG.shuffle(all_ids)
         online_ids = all_ids[:min(n, len(all_ids))]
-        # 给在线用户的向量加随机扰动, 制造更明显的漂移
         for u in users:
             if u.user_id in online_ids:
-                v = u.persona_vector
+                v = list(u.persona_vector)
                 noise = [max(0.001, x + RNG.gauss(0, 0.05)) for x in v]
-                total = sum(noise)
+                total = sum(noise) or 1.0
                 u.persona_vector = [round(x / total, 4) for x in noise]
         _live_room["online_user_ids"] = online_ids
         _live_room["rotation_count"] += 1
 
-        # 重新聚合偏好并检测漂移 (跳过首次, 首次已由开场卡片处理)
         result = detect_drift(users)
         if result["drifted"] and _live_room["rotation_count"] >= 1:
             _live_room["pending_card_type"] = "drift"
-        print(f"[直播] #{_live_room['rotation_count']}: {n}在线, Top1={_live_room.get('current_top5',[])[0] if _live_room.get('current_top5') else '?'}, drift={result['drifted']}")
+        logger.info("[直播] #%d: %d在线, Top1=%s, drift=%s",
+                     _live_room['rotation_count'], n,
+                     _live_room.get('current_top5', [None])[0] or '?',
+                     result['drifted'])
 
         _live_event.set()
 
@@ -185,7 +213,7 @@ async def start_live(users, interval=15):
     _live_room["rotation_count"] = 0
     _live_room["rotation_interval"] = interval
     _live_room["baseline_vector"] = None
-    _live_room["baseline_top3"] = []
+    _live_room["baseline_top5"] = []
     _live_room["card_count"] = 0
     _live_room["last_card_time"] = 0
     _live_room["audience_history"] = []

@@ -4,6 +4,7 @@ import asyncio, json, time
 from typing import List
 from config import LATENT_DIM, CATEGORIES, DOMAIN_VECTOR_MAP, RNG, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 from models import VideoMeta, TagResult
+from utils import extract_json, logger
 
 TAG_MAP = {
     "知识干货": {"tags": ["知识科普", "硬核干货", "学习"], "vec": DOMAIN_VECTOR_MAP["知识干货"]},
@@ -78,10 +79,7 @@ class VideoTaggingAgent:
                 temperature=0.3, max_tokens=500,
             )
             content = resp.choices[0].message.content or ""
-            raw = content
-            if "```json" in content: raw = content.split("```json")[1].split("```")[0]
-            elif "```" in content: raw = content.split("```")[1].split("```")[0]
-            data = json.loads(raw.strip())
+            data = extract_json(content)
             v = data.get("vector", [0.1] * LATENT_DIM)
             s = sum(v) or 1
             return TagResult(

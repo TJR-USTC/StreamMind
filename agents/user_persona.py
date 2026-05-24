@@ -16,19 +16,11 @@ class UserPersonaAgent:
 
     def update_one(self, user: UserProfile, bhv: UserBehavior,
                    vid_vec: List[float]) -> bool:
-        """单次交互更新, 返回是否实际更新"""
+        """单次交互更新，返回是否实际更新"""
         if not bhv.is_visited:
             return False
 
-        c = (
-            (bhv.watch_ratio / 100.0) * 0.40
-            + (1 if bhv.is_liked else 0) * 0.20
-            + (1 if bhv.is_favorited else 0) * 0.30
-            + (1 if bhv.is_followed else 0) * 0.05
-            + (1 if bhv.is_commented else 0) * 0.05
-        )
-        c = max(0.0, min(1.0, c))
-
+        c = self.compute_weight(bhv)
         old = user.persona_vector
         nv = self._norm(vid_vec)
         new = [old[i] * self.beta + nv[i] * c * self.alpha for i in range(LATENT_DIM)]
@@ -48,13 +40,7 @@ class UserPersonaAgent:
             vv = vec_map.get(b.video_id, [0.2] * LATENT_DIM)
             if self.update_one(user, b, vv):
                 cnt += 1
-                c = (
-                    (b.watch_ratio / 100.0) * 0.40 + (1 if b.is_liked else 0) * 0.20
-                    + (1 if b.is_favorited else 0) * 0.30
-                    + (1 if b.is_followed else 0) * 0.05
-                    + (1 if b.is_commented else 0) * 0.05
-                )
-                total_w += max(0.0, min(1.0, c))
+                total_w += self.compute_weight(b)
 
         nv = user.persona_vector
         shift = math.sqrt(sum((a - b) ** 2 for a, b in zip(nv, old_vec)))

@@ -38,3 +38,10 @@ EMA_ALPHA = 0.6  # 提高新信息权重 (原来0.3太慢)
 EMA_BETA = 0.4
 
 RNG = random.Random(42)
+
+# ---- 数据规模 ----
+NUM_VIDEOS = 100
+NUM_USERS = 100
+
+# ---- 批量打标 ----
+BATCH_CONCURRENCY = 8

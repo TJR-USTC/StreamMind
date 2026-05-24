@@ -1,19 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-============================================================================
 多智能体直播运营系统 — 工程化重构版
 启动: python main.py   或   uvicorn main:app --reload --port 8000
-============================================================================
 """
 import json
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from config import LATENT_DIM, CATEGORIES, DOMAIN_VECTOR_MAP
+# 加载 .env 环境变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+from config import LATENT_DIM, CATEGORIES, DOMAIN_VECTOR_MAP, NUM_VIDEOS, NUM_USERS
 from data_generator import MockDataGenerator, video_category
 from models import VideoMeta, UserProfile, UserBehavior
 from typing import Dict, List
+
+logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 
 
 # ---- 自定义UTF-8 JSON响应 ----
@@ -41,14 +50,14 @@ _vec_map: Dict[str, List[float]] = {}
 def _load_videos() -> List[VideoMeta]:
     global _videos
     if not _videos:
-        _videos = _generator.make_videos(100)
+        _videos = _generator.make_videos(NUM_VIDEOS)
     return _videos
 
 
 def _load_users() -> List[UserProfile]:
     global _users
     if not _users:
-        _users = _generator.make_users(100)
+        _users = _generator.make_users(NUM_USERS)
     return _users
 
 

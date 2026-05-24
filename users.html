@@ -9,9 +9,14 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono',sans-serif}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0a0a0f}::-webkit-scrollbar-thumb{background:#1e1e30;border-radius:2px}
-.panel{border:1px solid #1e1e30;border-radius:12px;background:#0f0f1a}
-.bar{height:6px;border-radius:3px;min-width:1px}
-.tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700}
+.panel{border:1px solid #1e1e30;border-radius:12px;background:#0f0f1a;box-shadow:0 0 30px rgba(0,0,0,.4)}
+.bar{height:6px;border-radius:3px;min-width:1px;transition:width .4s ease}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.fade-in{animation:fadein .35s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid #1e1e30;border-top-color:#00d4ff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+.btn{transition:all .2s ease}.btn:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body class="p-4">
@@ -19,30 +24,30 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
 <header class="flex items-center justify-between mb-4">
   <div>
     <h1 class="text-xl font-black"><span style="color:#00d4ff">用户画像</span><span class="text-gray-500 text-sm ml-2">Persona Vector + 行为特征</span></h1>
-    <p class="text-xs text-gray-600 mt-1" id="summary">加载中...</p>
+    <p class="text-xs text-gray-600 mt-1" id="summary"><span class="spinner mr-1"></span>加载中...</p>
   </div>
   <div class="flex gap-2">
-    <select id="filter-dom" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none" onchange="renderTable()"></select>
-    <input id="search" type="text" placeholder="搜索用户名/ID..." class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none w-40" oninput="renderTable()">
-    <button onclick="loadData()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0f0f1a] border border-[#1e1e30] text-gray-400 hover:text-[#00ff88] hover:border-[#00ff88]">刷新</button>
+    <select id="filter-dom" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-[#00d4ff]" onchange="renderTable()"></select>
+    <input id="search" type="text" placeholder="搜索用户名/ID..." class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none w-40 focus:border-[#00d4ff]" oninput="renderTable()">
+    <button onclick="loadData()" class="btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0f0f1a] border border-[#1e1e30] text-gray-400 hover:text-[#00d4ff] hover:border-[#00d4ff]">刷新</button>
   </div>
 </header>
 
 <div class="panel p-3" style="overflow-x:auto">
-  <table class="w-full text-xs whitespace-nowrap">
+  <table class="w-full text-xs">
     <thead class="sticky top-0 bg-[#0f0f1a] z-10">
       <tr class="text-gray-500 border-b border-[#1e1e30]">
         <th class="text-left py-2 px-2">User ID</th>
         <th class="text-left py-2 px-2">用户名</th>
-        <th class="text-left py-2 px-2">主导维度</th>
+        <th class="text-left py-2 px-2" style="min-width:56px">主导维度</th>
         <th class="text-left py-2 px-2" style="min-width:360px">12维状态向量</th>
-        <th class="text-right py-2 px-2">总行为</th>
-        <th class="text-right py-2 px-2">访问量</th>
-        <th class="text-right py-2 px-2">平均观看%</th>
-        <th class="text-right py-2 px-2">点赞率</th>
-        <th class="text-right py-2 px-2">收藏率</th>
-        <th class="text-right py-2 px-2">评论率</th>
-        <th class="text-right py-2 px-2">关注率</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">总行为</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">访问量</th>
+        <th class="text-right py-2 px-2" style="min-width:72px">平均观看%</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">点赞率</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">收藏率</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">评论率</th>
+        <th class="text-right py-2 px-2" style="min-width:48px">关注率</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -53,13 +58,13 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
 
 <script>
 const API='http://localhost:8000';
-const LABELS=['美食消费','萌宠生活','游戏娱乐','旅行风景','知识干货','科技数码','户外旅行','情感心理','穿搭美妆','运动健身','影视八卦','职场提升','家居生活'];
-const COLORS=['#ff6b6b','#4ecdc4','#ffd93d','#6bcb77','#4d96ff','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d','#a855f7'];
+const LABELS=['知识干货','游戏娱乐','美食探店','科技数码','户外旅行','萌宠日常','情感心理','穿搭美妆','运动健身','影视八卦','职场提升','家居生活'];
+const COLORS=['#ff6b6b','#ffd93d','#4ecdc4','#4d96ff','#6bcb77','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d'];
 let allUsers=[];
 
 async function loadData(){
   try{
-    document.getElementById('summary').textContent='加载中...';
+    document.getElementById('summary').innerHTML='<span class="spinner mr-1"></span>加载中...';
     var r=await fetch(API+'/api/users/stats/all');var d=await r.json();
     allUsers=d.users||[];
     document.getElementById('summary').textContent='共 '+allUsers.length+' 个用户 | 12维向量 + 5项行为指标';
@@ -82,7 +87,7 @@ function renderTable(){
   var dim=document.getElementById('filter-dom').value,q=(document.getElementById('search').value||'').toLowerCase();
   var filtered=allUsers.filter(function(u){
     if(dim!=='all'&&LABELS[u.dominant_dim]!==dim)return false;
-    if(q&&u.user_id.toLowerCase().indexOf(q)===-1&&u.username.toLowerCase().indexOf(q)===-1)return false;
+    if(q&&u.user_id.indexOf(q)===-1&&u.username.indexOf(q)===-1)return false;
     return true;
   });
   var h='';
@@ -93,7 +98,7 @@ function renderTable(){
     var likes=u.like_rate>50?'text-[#00ff88]':u.like_rate>25?'text-[#ffd700]':'text-gray-500';
     var favs=u.favorite_rate>30?'text-[#00ff88]':u.favorite_rate>15?'text-[#ffd700]':'text-gray-500';
     var coms=u.comment_rate>10?'text-[#00ff88]':u.comment_rate>5?'text-[#ffd700]':'text-gray-500';
-    h+='<tr class="border-b border-[#1a1a25] hover:bg-[#1a1a25] transition-colors">'
+    h+='<tr class="border-b border-[#1a1a25] hover:bg-[#1a1a25] transition-colors fade-in">'
       +'<td class="py-2 px-2 text-gray-500">'+u.user_id+'</td>'
       +'<td class="py-2 px-2 text-gray-300">'+u.username+'</td>'
       +'<td class="py-2 px-2"><span class="tag" style="background:'+co+'20;color:'+co+'">'+dl+'</span></td>'
@@ -107,7 +112,7 @@ function renderTable(){
       +'<td class="py-2 px-2 text-right text-gray-500">'+u.follow_rate+'%</td>'
       +'</tr>';
   });
-  document.getElementById('tbody').innerHTML=h||'<tr><td colspan="11" class="text-center py-8 text-gray-600">无匹配结果</td></tr>';
+  document.getElementById('tbody').innerHTML=h||'<tr><td colspan="11" class="text-center py-12 text-gray-600">无匹配结果</td></tr>';
 }
 
 loadData();

@@ -9,9 +9,15 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono',sans-serif}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0a0a0f}::-webkit-scrollbar-thumb{background:#1e1e30;border-radius:2px}
-.panel{border:1px solid #1e1e30;border-radius:12px;background:#0f0f1a}
-.bar{height:6px;border-radius:3px;min-width:1px}
-.tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700}
+.panel{border:1px solid #1e1e30;border-radius:12px;background:#0f0f1a;box-shadow:0 0 30px rgba(0,0,0,.4)}
+.bar{height:6px;border-radius:3px;min-width:1px;transition:width .4s ease}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.fade-in{animation:fadein .35s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid #1e1e30;border-top-color:#00ff88;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+.btn{transition:all .2s ease}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn-primary{background:linear-gradient(135deg,#059669,#10b981);color:white}.btn-primary:hover:not(:disabled){box-shadow:0 0 20px rgba(16,185,129,.3);transform:translateY(-1px)}
 </style>
 </head>
 <body class="p-4">
@@ -19,26 +25,26 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
 <header class="flex items-center justify-between mb-4">
   <div>
     <h1 class="text-xl font-black"><span style="color:#00ff88">视频标注</span><span class="text-gray-500 text-sm ml-2">Tagging & Vector 结果</span></h1>
-    <p class="text-xs text-gray-600 mt-1" id="summary">加载中... | 先点击"批量打标"为所有视频生成标签</p>
+    <p class="text-xs text-gray-600 mt-1" id="summary"><span class="spinner mr-1"></span>加载中...</p>
   </div>
   <div class="flex gap-2">
-    <select id="filter-dom" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none" onchange="renderTable()"></select>
-    <input id="search" type="text" placeholder="搜索..." class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none w-32" oninput="renderTable()">
-    <button onclick="batchTag()" id="btn-tag" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25">批量打标</button>
-    <button onclick="loadData()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0f0f1a] border border-[#1e1e30] text-gray-400 hover:text-[#00ff88] hover:border-[#00ff88]">刷新</button>
+    <select id="filter-dom" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-[#00ff88]" onchange="renderTable()"></select>
+    <input id="search" type="text" placeholder="搜索..." class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none w-32 focus:border-[#00ff88]" oninput="renderTable()">
+    <button onclick="batchTag()" id="btn-tag" class="btn btn-primary px-4 py-1.5 rounded-lg text-xs font-bold">批量打标</button>
+    <button onclick="loadData()" class="btn px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0f0f1a] border border-[#1e1e30] text-gray-400 hover:text-[#00ff88] hover:border-[#00ff88]">刷新</button>
   </div>
 </header>
 
 <div class="panel p-3" style="overflow-x:auto">
-  <table class="w-full text-xs whitespace-nowrap">
+  <table class="w-full text-xs">
     <thead class="sticky top-0 bg-[#0f0f1a] z-10">
       <tr class="text-gray-500 border-b border-[#1e1e30]">
         <th class="text-left py-2 px-2">Video ID</th>
         <th class="text-left py-2 px-2">帧描述(片段)</th>
         <th class="text-left py-2 px-2">作者标签</th>
-        <th class="text-left py-2 px-2">AI 分类标签</th>
+        <th class="text-left py-2 px-2" style="min-width:80px">AI 分类标签</th>
         <th class="text-left py-2 px-2" style="min-width:360px">12维视频向量</th>
-        <th class="text-right py-2 px-2">置信度</th>
+        <th class="text-right py-2 px-2" style="min-width:56px">置信度</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -49,27 +55,27 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
 
 <script>
 const API='http://localhost:8000';
-const LABELS=['美食消费','萌宠生活','游戏娱乐','旅行风景','知识干货','科技数码','户外旅行','情感心理','穿搭美妆','运动健身','影视八卦','职场提升','家居生活'];
-const COLORS=['#ff6b6b','#4ecdc4','#ffd93d','#6bcb77','#4d96ff','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d','#a855f7'];
+const LABELS=['知识干货','游戏娱乐','美食探店','科技数码','户外旅行','萌宠日常','情感心理','穿搭美妆','运动健身','影视八卦','职场提升','家居生活'];
+const COLORS=['#ff6b6b','#ffd93d','#4ecdc4','#4d96ff','#6bcb77','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d'];
 let allVideos=[],allTags={},totalTagged=0;
 
 async function loadData(){
   try{
-    document.getElementById('summary').textContent='加载中...';
+    document.getElementById('summary').innerHTML='<span class="spinner mr-1"></span>加载中...';
     var r=await fetch(API+'/api/videos?limit=100');var d=await r.json();
     allVideos=d.items||[];
     var r2=await fetch(API+'/api/stats');var d2=await r2.json();
     totalTagged=d2.tagged_count||0;
     document.getElementById('summary').textContent='共 '+allVideos.length+' 个视频 | 已打标: '+totalTagged+' | 点击"批量打标"按钮生成AI标签';
     buildFilter();buildLegend();
-    await loadTags();
+    await loadTagsBatch();
     renderTable();
   }catch(e){document.getElementById('summary').textContent='加载失败: '+e.message;}
 }
 
 function buildFilter(){
   var s=document.getElementById('filter-dom'),c={};
-  allVideos.forEach(function(v){var idx=parseInt(v.video_id.split('_')[1])%13,l=LABELS[idx]||'#';c[l]=(c[l]||0)+1;});
+  allVideos.forEach(function(v){var idx=parseInt(v.video_id.split('_')[1])%12,l=LABELS[idx]||'#';c[l]=(c[l]||0)+1;});
   s.innerHTML='<option value="all">全部 ('+allVideos.length+')</option>';
   Object.keys(c).sort(function(a,b){return c[b]-c[a];}).forEach(function(k){s.innerHTML+='<option value="'+k+'">'+k+' ('+c[k]+')</option>';});
 }
@@ -78,36 +84,45 @@ function buildLegend(){
   document.getElementById('legend').innerHTML=LABELS.map(function(l,i){return '<span class="tag" style="background:'+COLORS[i]+'20;color:'+COLORS[i]+'">'+l+'</span>';}).join('');
 }
 
-async function loadTags(){
-  for(var i=0;i<allVideos.length;i++){
-    var vid=allVideos[i].video_id;
-    if(allTags[vid])continue;
-    try{var r=await fetch(API+'/api/videos/'+vid+'/tags');if(r.ok){allTags[vid]=await r.json();}}catch(e){}
+async function loadTagsBatch(){
+  var untagged=allVideos.filter(function(v){return !allTags[v.video_id];});
+  if(untagged.length===0)return;
+  var batch=8;
+  for(var i=0;i<untagged.length;i+=batch){
+    var chunk=untagged.slice(i,i+batch);
+    var promises=chunk.map(function(v){
+      return fetch(API+'/api/videos/'+v.video_id+'/tags').then(function(r){
+        if(r.ok)return r.json().then(function(d){allTags[v.video_id]=d;});
+      }).catch(function(){});
+    });
+    await Promise.all(promises);
   }
 }
 
 async function batchTag(){
-  document.getElementById('summary').textContent='正在批量打标 100 个视频...';
+  var btn=document.getElementById('btn-tag');
+  btn.disabled=true;btn.textContent='打标中...';
+  document.getElementById('summary').innerHTML='<span class="spinner mr-1"></span>正在批量打标 '+allVideos.length+' 个视频...';
   var ids=allVideos.map(function(v){return v.video_id;});
   try{
     var r=await fetch(API+'/api/videos/tag/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_ids:ids,llm_mode:'mock'})});
     var d=await r.json();totalTagged=d.success;
     document.getElementById('summary').textContent='打标完成! '+d.success+'/'+d.total+' 耗时'+d.elapsed_ms+'ms';
-    allTags={};await loadTags();renderTable();
+    allTags={};await loadTagsBatch();renderTable();
   }catch(e){document.getElementById('summary').textContent='失败: '+e.message;}
+  btn.disabled=false;btn.textContent='批量打标';
 }
 
 function renderTable(){
   var dim=document.getElementById('filter-dom').value,q=(document.getElementById('search').value||'').toLowerCase();
   var filtered=allVideos.filter(function(v){
-    if(dim!=='all'){var idx=parseInt(v.video_id.split('_')[1])%13;if(LABELS[idx]!==dim)return false;}
-    if(q){var txt=(v.frame_descriptions||[]).join(' ')+(v.author_tags||[]).join(' ');if(txt.toLowerCase().indexOf(q)===-1&&v.video_id.indexOf(q)===-1)return false;}
+    if(dim!=='all'){var idx=parseInt(v.video_id.split('_')[1])%12;if(LABELS[idx]!==dim)return false;}
+    if(q){var txt=(v.frame_descriptions||[]).join(' ')+(v.author_tags||[]).join(' ');if(txt.indexOf(q)===-1&&v.video_id.indexOf(q)===-1)return false;}
     return true;
   });
-
   var h='';
   filtered.forEach(function(v){
-    var idx=parseInt(v.video_id.split('_')[1])%13,dl=LABELS[idx]||'#',co=COLORS[idx%COLORS.length];
+    var idx=parseInt(v.video_id.split('_')[1])%12,dl=LABELS[idx]||'#',co=COLORS[idx%COLORS.length];
     var frames=(v.frame_descriptions||[]).slice(0,2).map(function(f){return f.substring(0,12)+'...';}).join('<br>');
     var atags=(v.author_tags||[]).map(function(t){return '<span class="tag" style="background:'+co+'15;color:'+co+'">'+t+'</span>';}).join(' ');
     var tg=allTags[v.video_id];
@@ -122,7 +137,7 @@ function renderTable(){
       aiVec='<div style="line-height:8px;margin-bottom:2px">'+bars+'</div><div style="line-height:12px">'+vals+'</div>';
       conf='<span style="color:'+(tg.confidence>0.85?'#00ff88':tg.confidence>0.7?'#ffd700':'#ff4757')+'">'+(tg.confidence*100).toFixed(0)+'%</span>';
     }
-    h+='<tr class="border-b border-[#1a1a25] hover:bg-[#1a1a25] transition-colors">'
+    h+='<tr class="border-b border-[#1a1a25] hover:bg-[#1a1a25] transition-colors fade-in">'
       +'<td class="py-2 px-2 text-gray-500">'+v.video_id+'</td>'
       +'<td class="py-2 px-2 text-gray-600 text-[11px] leading-relaxed">'+frames+'</td>'
       +'<td class="py-2 px-2"><div class="flex flex-wrap gap-1">'+atags+'</div></td>'
@@ -131,7 +146,7 @@ function renderTable(){
       +'<td class="py-2 px-2 text-right font-bold">'+conf+'</td>'
       +'</tr>';
   });
-  document.getElementById('tbody').innerHTML=h||'<tr><td colspan="6" class="text-center py-8 text-gray-600">无匹配结果</td></tr>';
+  document.getElementById('tbody').innerHTML=h||'<tr><td colspan="6" class="text-center py-12 text-gray-600">无匹配结果</td></tr>';
 }
 
 loadData();

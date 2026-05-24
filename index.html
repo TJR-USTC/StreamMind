@@ -20,19 +20,20 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
 .card-glow{animation:cardGlow 3s ease-in-out infinite}
 @keyframes driftPulse{0%,100%{opacity:1}50%{opacity:.4}}
 .drift-active{animation:driftPulse 1s ease-in-out 3}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid #1e1e30;border-top-color:#00ff88;border-radius:50%;animation:spin .6s linear infinite}
+.btn-primary{transition:all .2s ease}.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-danger{transition:all .2s ease}
+.fade-in{animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body class="flex flex-col h-screen">
 
-<header class="h-16 bg-[#0f0f1a] border-b border-[#1e1e30] flex items-center px-6 gap-6 shrink-0 z-10">
-  <h1 class="text-lg font-black tracking-wider"><span style="color:#00d4ff">灵犀</span><span class="text-xs text-gray-500 ml-2">StreamMind · 事件驱动决策卡片 v5.1</span></h1>
+<header class="h-16 bg-[#0f0f1a] border-b border-[#1e1e30] flex items-center px-6 gap-6 shrink-0 z-20">
+  <h1 class="text-lg font-black tracking-wider"><span style="color:#00d4ff">灵犀</span><span class="text-xs text-gray-500 ml-2">StreamMind v5.2</span></h1>
   <div class="flex items-center gap-1 ml-4"><span id="status-dot" class="pulse off"></span><span id="status-text" class="text-xs text-gray-500 uppercase">离线</span></div>
   <div class="flex items-center gap-5 ml-auto">
-    <div class="flex items-center gap-2"><label class="text-xs text-gray-500">风格</label>
-      <select id="live-style" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-[#00ff88]">
-        <option value="幽默">幽默</option><option value="知性">知性</option><option value="激情">激情</option>
-      </select>
-    </div>
     <div class="flex items-center gap-2"><label class="text-xs text-gray-500">轮换</label>
       <select id="rotation-interval" class="bg-[#0a0a0f] border border-[#1e1e30] rounded-lg px-3 py-1.5 text-sm text-gray-300 outline-none focus:border-[#00ff88]">
         <option value="0.1">0.1秒</option><option value="1">1秒</option><option value="5">5秒</option><option value="10">10秒</option><option value="15" selected>15秒</option><option value="30">30秒</option>
@@ -43,14 +44,14 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
       <span id="mic-silence-timer" class="text-xs text-gray-600">--</span>
     </div>
     <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer"><input type="checkbox" id="chk-webcam" checked onchange="toggleWebcam()"> 摄像头</label>
-    <button id="btn-live-toggle" class="px-6 py-2 rounded-lg text-sm font-bold tracking-wider bg-gradient-to-r from-green-600 to-emerald-600 text-white transition-all hover:shadow-lg hover:shadow-green-500/25" onclick="toggleLive()">开始直播</button>
+    <button id="btn-live-toggle" class="btn-primary px-6 py-2 rounded-lg text-sm font-bold tracking-wider bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25" onclick="toggleLive()">开始直播</button>
   </div>
 </header>
 
 <main class="flex flex-1 overflow-hidden">
    <aside class="w-[38%] min-w-[440px] border-r border-[#1e1e30] flex flex-col gap-2 p-2 overflow-y-auto">
     <div class="panel p-3">
-      <h3 class="text-xs text-gray-500 uppercase tracking-wider mb-2">观众偏好 Top 5</h3>
+      <h3 class="text-xs text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">观众偏好 Top 5 <span id="top5-loading" class="spinner hidden"></span></h3>
       <div id="top5-list" class="flex flex-col gap-2">
         <div class="text-xs text-gray-700 text-center py-6">等待开播...</div>
       </div>
@@ -66,7 +67,7 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
       <div class="grid grid-cols-3 gap-2 text-center text-xs">
         <div class="bg-[#0a0a0f] rounded p-2"><div class="text-gray-600">基线Top1</div><div id="drift-baseline" class="text-gray-500 mt-1 text-[11px]">--</div></div>
         <div class="bg-[#0a0a0f] rounded p-2"><div class="text-gray-600">当前Top1</div><div id="drift-current" class="text-[#00ff88] mt-1 text-[11px]">--</div></div>
-        <div class="bg-[#0a0a0f] rounded p-2"><div class="text-gray-600">距离</div><div id="drift-distance" class="text-[#ffd700] font-bold mt-1">--</div></div>
+        <div class="bg-[#0a0a0f] rounded p-2"><div class="text-gray-600">漂移距离</div><div id="drift-distance" class="text-[#ffd700] font-bold mt-1">--</div></div>
       </div>
       <div class="grid grid-cols-4 gap-2 text-center mt-2">
         <div class="bg-[#0a0a0f] rounded p-2"><div class="text-base font-bold text-[#00ff88]" id="stat-online">0</div><div class="text-[10px] text-gray-600">在线</div></div>
@@ -75,10 +76,9 @@ body{background:#0a0a0f;color:#cbd5e1;font-family:'Noto Sans SC','JetBrains Mono
         <div class="bg-[#0a0a0f] rounded p-2"><div class="text-base font-bold text-[#ffd700]" id="stat-elapsed">00:00</div><div class="text-[10px] text-gray-600">时长</div></div>
       </div>
     </div>
-    <!-- ONLINE USERS TABLE (takes remaining space) -->
     <div class="panel p-3 flex-1 flex flex-col min-h-0" style="min-height:180px">
       <div class="flex items-center justify-between mb-1">
-        <h3 class="text-xs text-gray-500 uppercase tracking-wider">在线用户画像</h3>
+        <h3 class="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-2">在线用户画像 <span id="users-loading" class="spinner hidden"></span></h3>
         <span class="text-xs text-gray-600" id="table-count">0人</span>
       </div>
       <div class="flex-1 overflow-y-auto" id="online-users-table">
@@ -116,49 +116,51 @@ let highlightClips=[],currentClipStart=null,webcamEnabled=true;
 let audioContext=null,analyserNode=null,micStream=null;
 let micCheckInterval=null,silenceStart=null,micEnabled=true;
 const MIC_THRESHOLD=0.015,SILENCE_DURATION=10000;
+const LABELS=['知识干货','游戏娱乐','美食探店','科技数码','户外旅行','萌宠日常','情感心理','穿搭美妆','运动健身','影视八卦','职场提升','家居生活'];
+const COLORS=['#ff6b6b','#ffd93d','#4ecdc4','#4d96ff','#6bcb77','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d'];
+const MEDALS=['1','2','3','4','5'];
+const TOP5_COLORS=['#ff6b6b','#ffd93d','#4ecdc4','#6bcb77','#4d96ff'];
 
 function renderTop5(p){
   var el=document.getElementById('top5-list');
   if(!el)return;
   var top5=p.slice(0,5);
   if(!top5.length){el.innerHTML='<div class="text-xs text-gray-700 text-center py-6">暂无数据</div>';return;}
-  var colors=['#ff6b6b','#ffd93d','#4ecdc4','#6bcb77','#4d96ff'];
-  var medals=['1','2','3','4','5'];
   var h='';
   top5.forEach(function(x,i){
-    h+='<div class="flex items-center gap-2 bg-[#0a0a0f] rounded-lg p-2">'
-      +'<span class="text-lg font-black w-6 text-center" style="color:'+colors[i]+'">'+medals[i]+'</span>'
+    h+='<div class="flex items-center gap-2 bg-[#0a0a0f] rounded-lg p-2 fade-in">'
+      +'<span class="text-lg font-black w-6 text-center" style="color:'+TOP5_COLORS[i]+'">'+MEDALS[i]+'</span>'
       +'<span class="text-sm text-gray-300 font-medium w-20 truncate">'+x.dim+'</span>'
-      +'<div class="flex-1 h-3 bg-[#111] rounded-full overflow-hidden ml-2"><div style="width:'+x.pct+'%;height:100%;background:'+colors[i]+';border-radius:6px;transition:width .5s"></div></div>'
-      +'<span class="text-xs font-bold w-12 text-right" style="color:'+colors[i]+'">'+x.pct+'%</span>'
+      +'<div class="flex-1 h-3 bg-[#111] rounded-full overflow-hidden ml-2"><div style="width:'+x.pct+'%;height:100%;background:'+TOP5_COLORS[i]+';border-radius:6px;transition:width .5s ease"></div></div>'
+      +'<span class="text-xs font-bold w-12 text-right" style="color:'+TOP5_COLORS[i]+'">'+x.pct+'%</span>'
       +'</div>';
   });
   el.innerHTML=h;
 }
 function switchMode(m){
   currentMode=m;
-  document.getElementById('tab-cards-btn').className=m==='cards'?'px-4 py-1.5 rounded-md text-xs font-bold bg-[#0a0a0f] text-[#00ff88]':'px-4 py-1.5 rounded-md text-xs font-bold text-gray-600';
-  document.getElementById('tab-clips-btn').className=m==='clips'?'px-4 py-1.5 rounded-md text-xs font-bold bg-[#0a0a0f] text-[#ffd700]':'px-4 py-1.5 rounded-md text-xs font-bold text-gray-600';
+  document.getElementById('tab-cards-btn').className=m==='cards'?'px-4 py-1.5 rounded-md text-xs font-bold transition-all bg-[#0a0a0f] text-[#00ff88]':'px-4 py-1.5 rounded-md text-xs font-bold transition-all text-gray-600 hover:text-[#00ff88]';
+  document.getElementById('tab-clips-btn').className=m==='clips'?'px-4 py-1.5 rounded-md text-xs font-bold transition-all bg-[#0a0a0f] text-[#ffd700]':'px-4 py-1.5 rounded-md text-xs font-bold transition-all text-gray-600 hover:text-[#ffd700]';
   document.getElementById('view-cards').classList.toggle('hidden',m!=='cards');
   document.getElementById('view-clips').classList.toggle('hidden',m!=='clips');
 }
-async function toggleLive(){if(isLive){await stopLive();}else{await startLive();}}
+async function toggleLive(){var btn=document.getElementById('btn-live-toggle');btn.disabled=true;try{if(isLive){await stopLive();}else{await startLive();}}finally{btn.disabled=false;}}
 
 async function startLive(){
-  const iv=document.getElementById('rotation-interval').value;
+  var iv=document.getElementById('rotation-interval').value;
   var r,d;
   try{r=await fetch(API+'/api/live/start?interval='+iv,{method:'POST'});d=await r.json();}
   catch(e){alert('无法连接服务器, 请确认后端已启动');return;}
   if(!d.ok){
     if(confirm('直播已在进行中(可能上次未正常结束)。是否强制重置?')){
       await fetch(API+'/api/live/force-reset',{method:'POST'});
-      startLive();return;
+      await startLive();return;
     }
     return;
   }
   isLive=true;liveStartTime=Date.now();totalCards=0;
   document.getElementById('btn-live-toggle').textContent='结束直播';
-  document.getElementById('btn-live-toggle').className=document.getElementById('btn-live-toggle').className.replace(/from-green-600|to-emerald-600/g,'from-red-600 to-rose-600');
+  document.getElementById('btn-live-toggle').className='btn-danger px-6 py-2 rounded-lg text-sm font-bold tracking-wider bg-gradient-to-r from-red-600 to-rose-600 text-white hover:shadow-lg hover:shadow-red-500/25';
   document.getElementById('status-dot').className='pulse live';
   document.getElementById('status-text').textContent='直播中';document.getElementById('status-text').style.color='#00ff88';
   document.getElementById('stat-online').textContent=d.online_count;
@@ -166,8 +168,8 @@ async function startLive(){
   document.getElementById('view-cards').innerHTML='';
   highlightClips=[];recordedChunks=[];currentClipStart=null;switchMode('cards');
   await startWebcam();startRecording();startMicMonitor();startCardStream();
-  fetchLiveStats();  // 立即加载
-  statsTimer=setInterval(fetchLiveStats,5000);  // 每5秒更新Top5
+  fetchLiveStats();
+  statsTimer=setInterval(fetchLiveStats,5000);
   onlineUsersTimer=setInterval(fetchOnlineUsers,3000);
   fetchOnlineUsers();
   elapsedTimer=setInterval(function(){
@@ -181,7 +183,7 @@ async function stopLive(){
   try{await fetch(API+'/api/live/stop',{method:'POST'});}catch(e){}
   isLive=false;
   document.getElementById('btn-live-toggle').textContent='开始直播';
-  document.getElementById('btn-live-toggle').className=document.getElementById('btn-live-toggle').className.replace(/from-red-600|to-rose-600/g,'from-green-600 to-emerald-600');
+  document.getElementById('btn-live-toggle').className='btn-primary px-6 py-2 rounded-lg text-sm font-bold tracking-wider bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25';
   document.getElementById('status-dot').className='pulse off';document.getElementById('status-text').textContent='离线';document.getElementById('status-text').style.color='#64748b';
   document.getElementById('rec-dot').classList.add('hidden');
   if(cardSource){cardSource.close();cardSource=null;}
@@ -190,32 +192,29 @@ async function stopLive(){
   if(onlineUsersTimer){clearInterval(onlineUsersTimer);onlineUsersTimer=null;}
   stopWebcam();document.getElementById('info-status').textContent='状态: 离线';
   buildClipGallery();switchMode('clips');
-  // Delay chart draw until DOM is visible
   setTimeout(function(){drawAudienceHistory();},200);
 }
 
-// ---- WEB CAM ----
 async function startWebcam(){
   if(!webcamEnabled)return;
   try{mediaStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:360},audio:false});
     document.getElementById('webcam-video').srcObject=mediaStream;
     document.getElementById('webcam-video').classList.remove('hidden');
     document.getElementById('webcam-placeholder').classList.add('hidden');
-  }catch(e){console.warn('Webcam:',e);}
+  }catch(e){webcamEnabled=false;document.getElementById('chk-webcam').checked=false;}
 }
 function stopWebcam(){if(mediaStream){mediaStream.getTracks().forEach(t=>t.stop());mediaStream=null;}
   document.getElementById('webcam-video').classList.add('hidden');
   document.getElementById('webcam-placeholder').classList.remove('hidden');}
 function toggleWebcam(){webcamEnabled=document.getElementById('chk-webcam').checked;if(isLive){webcamEnabled?startWebcam():stopWebcam();}}
 
-// ---- RECORDING ----
 function startRecording(){
   if(!mediaStream)return;
   try{var m='video/webm;codecs=vp9';if(!MediaRecorder.isTypeSupported(m))m='video/webm';
     mediaRecorder=new MediaRecorder(mediaStream,{mimeType:m});
     mediaRecorder.ondataavailable=function(e){if(e.data.size>0)recordedChunks.push(e.data);};
     mediaRecorder.start(1000);document.getElementById('rec-dot').classList.remove('hidden');currentClipStart=Date.now();
-  }catch(e){console.warn('Rec:',e);}
+  }catch(e){}
 }
 function captureHighlightClip(reason){
   if(!mediaRecorder||recordedChunks.length===0)return;
@@ -233,16 +232,15 @@ function buildClipGallery(){
   if(highlightClips.length===0){c.innerHTML='<div class="text-center py-8 text-gray-600"><p class="text-sm">无高光切片</p></div>';return;}
   var h='<h3 class="text-xs text-gray-500 uppercase tracking-wider mb-2">高光切片 ('+highlightClips.length+'段)</h3>';
   highlightClips.forEach(function(clip){
-    h+='<div class="panel p-3 flex gap-3 mb-2"><div class="w-1/3 bg-black rounded overflow-hidden" style="aspect-ratio:16/9"><video src="'+clip.url+'" class="w-full h-full object-cover" controls preload="metadata"></video></div>'
+    h+='<div class="panel p-3 flex gap-3 mb-2 fade-in"><div class="w-1/3 bg-black rounded overflow-hidden" style="aspect-ratio:16/9"><video src="'+clip.url+'" class="w-full h-full object-cover" controls preload="metadata"></video></div>'
       +'<div class="flex-1 flex flex-col justify-center"><div class="text-xs text-[#ffd700] font-bold mb-1">#'+clip.id+' '+clip.startTime+' - '+clip.endTime+'</div>'
       +'<div class="text-sm text-gray-300 mb-2">'+clip.reason+'</div>'
-      +'<div class="flex gap-2"><button onclick="this.closest(\'.panel\').querySelector(\'video\').play()" class="px-3 py-1 rounded text-xs bg-[#0a0a0f] border border-[#1e1e30] text-[#00ff88]">播放</button>'
-      +'<a href="'+clip.url+'" download="clip_'+clip.id+'.webm" class="px-3 py-1 rounded text-xs bg-[#0a0a0f] border border-[#1e1e30] text-gray-500">下载</a></div></div></div>';
+      +'<div class="flex gap-2"><button onclick="this.closest(\'.panel\').querySelector(\'video\').play()" class="px-3 py-1 rounded text-xs bg-[#0a0a0f] border border-[#1e1e30] text-[#00ff88] hover:border-[#00ff88]">播放</button>'
+      +'<a href="'+clip.url+'" download="clip_'+clip.id+'.webm" class="px-3 py-1 rounded text-xs bg-[#0a0a0f] border border-[#1e1e30] text-gray-500 hover:text-gray-300">下载</a></div></div></div>';
   });
   c.innerHTML=h;
 }
 
-// ---- STATS ----
 async function fetchLiveStats(){
   if(!isLive)return;
   try{var r=await fetch(API+'/api/live/stats');var d=await r.json();
@@ -252,22 +250,19 @@ async function fetchLiveStats(){
     document.getElementById('drift-baseline').textContent=(d.baseline_top5||[])[0]||'--';
     document.getElementById('drift-current').textContent=(d.current_top5||[])[0]||'--';
     if(d.preferences&&d.preferences.length>0)renderTop5(d.preferences);
-    // Collect audience history
     if(d.history)audienceHistoryData=d.history;
   }catch(e){}
 }
 
-// ---- Audience History Chart ----
 function drawAudienceHistory(){
   var data=audienceHistoryData;
   if(!data||data.length<2)return;
   var container=document.getElementById('audience-history-chart');
   if(!container)return;
   container.innerHTML='';
-  var c=echarts.init(container);
+  var c=echarts.init(container);chartInstance=c;
   var times=data.map(function(d){var dt=new Date(d[0]*1000);return dt.getMinutes()+':'+String(dt.getSeconds()).padStart(2,'0');});
   var counts=data.map(function(d){return d[1];});
-  // Find peak
   var maxCount=Math.max.apply(null,counts);
   var peakIdx=counts.indexOf(maxCount);
   var markPoints=[];
@@ -282,29 +277,27 @@ function drawAudienceHistory(){
   window.addEventListener('resize',function(){c.resize();},{once:true});
 }
 
-// ---- ONLINE USERS TABLE ----
 async function fetchOnlineUsers(){
   if(!isLive)return;
+  var el=document.getElementById('online-users-table');
+  var tel=document.getElementById('table-count');
+  if(!el)return;
   try{
     var r=await fetch(API+'/api/live/users/online');
-    if(!r.ok)return;
+    if(!r.ok){el.innerHTML='<div class="text-xs text-gray-700 text-center py-4">加载失败</div>';return;}
     var d=await r.json();
-    var tel=document.getElementById('table-count');
-    var el=document.getElementById('online-users-table');
-    if(!el)return;
     tel.textContent=(d.count||0)+'人';
     if(!d.count||!d.online||d.online.length===0){
       el.innerHTML='<div class="text-xs text-gray-700 text-center py-4">暂无在线用户</div>';return;
     }
-    var labels=d.labels||[];
-    var colors=['#ff6b6b','#4ecdc4','#ffd93d','#6bcb77','#4d96ff','#ff922b','#845ef7','#f06595','#20c997','#339af0','#fcc419','#94d82d'];
+    var labels=d.labels||LABELS;
     var h='<div style="display:flex;flex-direction:column;gap:2px">';
     for(var i=0;i<d.online.length;i++){
       var u=d.online[i],di=u.dominant_dim;
-      var dl=labels[di]||('#'+di),co=colors[di%colors.length];
+      var dl=labels[di]||('#'+di),co=COLORS[di%COLORS.length];
       var tops='';
       if(u.top3)for(var j=0;j<Math.min(3,u.top3.length);j++)tops+=labels[u.top3[j][0]]+':'+Math.round(u.top3[j][1]*100)+'% ';
-      h+='<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:11px">'
+      h+='<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:11px" class="fade-in">'
         +'<span style="color:#64748b;width:64px;flex-shrink:0">'+u.user_id+'</span>'
         +'<span style="color:#94a3b8;width:80px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+u.username+'</span>'
         +'<span style="padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;flex-shrink:0;background:'+co+'20;color:'+co+'">'+dl+'</span>'
@@ -312,10 +305,9 @@ async function fetchOnlineUsers(){
         +'</div>';
     }
     h+='</div>';el.innerHTML=h;
-  }catch(e){console.error('online users:',e);}
+  }catch(e){el.innerHTML='<div class="text-xs text-gray-700 text-center py-4">加载失败</div>';}
 }
 
-// ---- CARDS SSE ----
 function startCardStream(){
   if(cardSource)cardSource.close();
   cardSource=new EventSource(API+'/api/live/cards/stream?llm_mode=mock');
@@ -342,16 +334,15 @@ function renderCard(card,num,ct){
   var bc=tc[ct]||'#ffd700',lb=tl[ct]||'决策';
   var d=document.createElement('div');d.className='panel card-pop card-glow p-4';
   d.style.borderLeft='4px solid '+bc;
-  d.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+  d.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:10px">'
     +'<span style="font-size:11px;font-weight:bold;color:'+bc+'">#'+num+' '+lb+'卡片</span>'
     +'<span style="font-size:11px;color:#64748b">'+new Date().toLocaleTimeString()+'</span></div>'
-    +'<div style="margin-bottom:8px"><div style="font-size:10px;color:#64748b;margin-bottom:2px">话题</div><div style="font-size:16px;font-weight:bold;color:#00d4ff">'+card.topic+'</div></div>'
-    +'<div style="margin-bottom:8px"><div style="font-size:10px;color:#64748b;margin-bottom:2px">洞察</div><div style="font-size:13px;color:#cbd5e1">'+card.reason+'</div></div>'
-    +'<div><div style="font-size:10px;color:#64748b;margin-bottom:2px">口播</div><div style="font-size:13px;color:#94a3b8;font-style:italic;padding:6px;background:rgba(0,255,136,.04);border-radius:4px">"'+card.script+'"</div></div>';
+    +'<div style="margin-bottom:10px"><div style="font-size:10px;color:#64748b;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">话题</div><div style="font-size:16px;font-weight:bold;color:#00d4ff">'+card.topic+'</div></div>'
+    +'<div style="margin-bottom:10px"><div style="font-size:10px;color:#64748b;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">洞察</div><div style="font-size:13px;color:#cbd5e1">'+card.reason+'</div></div>'
+    +'<div><div style="font-size:10px;color:#64748b;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px">口播</div><div style="font-size:13px;color:#94a3b8;font-style:italic;padding:8px;background:rgba(0,255,136,.04);border-radius:6px;border-left:2px solid '+bc+'">"'+card.script+'"</div></div>';
   el.prepend(d);el.scrollTop=0;
 }
 
-// ---- MIC ----
 async function startMicMonitor(){
   if(!micEnabled)return;
   try{micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
@@ -385,7 +376,6 @@ function checkMicLevel(){
   }else{silenceStart=null;timer.textContent='--';timer.style.color='#64748b';}
 }
 
-window.addEventListener('resize',function(){});
 window.addEventListener('resize',function(){if(chartInstance)chartInstance.resize();});
 fetchLiveStats();
 </script>
